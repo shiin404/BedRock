@@ -3,11 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Premium Notes</title>
+    <title>Premium Notes v2</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
-        body { background-color: #F5F7F8; }
+        body { background-color: #F5F7F8; font-family: sans-serif; }
+        .note-card { transition: transform 0.2s; }
+        .note-card:hover { transform: translateY(-2px); }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -15,19 +18,17 @@
     <div class="max-w-2xl mx-auto">
         <header class="mb-8 flex justify-between items-center">
             <h1 class="text-2xl font-bold text-slate-800">Мои заметки</h1>
-            <button onclick="exportToPDF()" class="bg-slate-800 text-white px-4 py-2 rounded-xl text-sm hover:bg-slate-700 transition-all">
-                Экспорт в PDF
-            </button>
+            <div class="text-xs text-slate-400 uppercase tracking-widest">Local Storage App</div>
         </header>
 
-        <div class="bg-white p-6 rounded-2xl shadow-sm mb-8 border border-slate-100">
-            <textarea id="noteInput" class="w-full h-32 p-4 bg-slate-50 rounded-xl border-none focus:ring-2 focus:ring-slate-200 outline-none resize-none" placeholder="Что на уме?"></textarea>
-            <button onclick="addNote()" class="mt-4 w-full bg-indigo-500 text-white py-3 rounded-xl font-medium hover:bg-indigo-600 active:scale-[0.98] transition-all">
-                Добавить заметку
+        <div class="bg-white p-6 rounded-3xl shadow-sm mb-10 border border-slate-100">
+            <textarea id="noteInput" class="w-full h-32 p-4 bg-slate-50 rounded-2xl border-none focus:ring-2 focus:ring-indigo-100 outline-none resize-none text-slate-700" placeholder="Напишите что-нибудь важное..."></textarea>
+            <button onclick="addNote()" class="mt-4 w-full bg-slate-900 text-white py-4 rounded-2xl font-semibold hover:bg-slate-800 active:scale-[0.98] transition-all shadow-lg shadow-slate-200">
+                Сохранить заметку
             </button>
         </div>
 
-        <div id="notesContainer" class="space-y-4">
+        <div id="notesContainer" class="grid gap-4">
             </div>
     </div>
 
@@ -41,14 +42,22 @@
             
             notes.forEach((note, index) => {
                 const div = document.createElement('div');
-                div.className = "bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex justify-between items-start animate-in fade-in duration-300";
+                div.className = "note-card bg-white p-6 rounded-3xl border border-slate-100 shadow-sm";
                 div.innerHTML = `
-                    <p class="text-slate-700 whitespace-pre-wrap">${note}</p>
-                    <button onclick="deleteNote(${index})" class="text-rose-400 hover:text-rose-600 ml-4">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
-                        </svg>
-                    </button>
+                    <p class="text-slate-700 whitespace-pre-wrap mb-6 leading-relaxed">${note}</p>
+                    <div class="flex justify-end gap-3 border-t border-slate-50 pt-4">
+                        <button onclick="exportSingleToPDF(${index})" class="flex items-center gap-2 text-xs font-bold text-indigo-600 bg-indigo-50 px-4 py-2 rounded-xl hover:bg-indigo-100 transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            PDF
+                        </button>
+                        <button onclick="deleteNote(${index})" class="p-2 text-rose-400 hover:bg-rose-50 rounded-xl transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
+                            </svg>
+                        </button>
+                    </div>
                 `;
                 container.appendChild(div);
             });
@@ -57,7 +66,6 @@
         function addNote() {
             const input = document.getElementById('noteInput');
             if (!input.value.trim()) return;
-            
             notes.unshift(input.value);
             save();
             input.value = '';
@@ -65,40 +73,38 @@
         }
 
         function deleteNote(index) {
-            notes.splice(index, 1);
-            save();
-            renderNotes();
+            if(confirm("Удалить эту заметку?")) {
+                notes.splice(index, 1);
+                save();
+                renderNotes();
+            }
         }
 
         function save() {
             localStorage.setItem('my_notes', JSON.stringify(notes));
         }
 
-        async function exportToPDF() {
-            if (notes.length === 0) return alert("Нет заметок для экспорта");
-            
+        // Экспорт ОДНОЙ заметки
+        async function exportSingleToPDF(index) {
+            const noteText = notes[index];
             const doc = new jsPDF();
-            doc.setFontSize(20);
-            doc.text("Мои заметки", 20, 20);
             
-            doc.setFontSize(12);
-            let y = 30;
+            // Настройка заголовка
+            doc.setFontSize(10);
+            doc.setTextColor(150);
+            doc.text(`Создано в MyNotes App - ${new Date().toLocaleDateString()}`, 20, 15);
             
-            notes.forEach((note, i) => {
-                const lines = doc.splitTextToSize(`${i + 1}. ${note}`, 170);
-                doc.text(lines, 20, y);
-                y += (lines.length * 7) + 5;
-                
-                if (y > 280) { // Перенос на новую страницу
-                    doc.addPage();
-                    y = 20;
-                }
-            });
+            // Основной текст
+            doc.setFontSize(14);
+            doc.setTextColor(40);
             
-            doc.save("notes.pdf");
+            // Разбиваем текст, чтобы он не выходил за края
+            const splitText = doc.splitTextToSize(noteText, 170);
+            doc.text(splitText, 20, 30);
+            
+            doc.save(`note-${index + 1}.pdf`);
         }
 
-        // Инициализация
         renderNotes();
     </script>
 </body>
