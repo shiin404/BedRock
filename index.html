@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Premium Notes</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        body { background-color: #F5F7F8; }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div class="max-w-2xl mx-auto">
+        <header class="mb-8 flex justify-between items-center">
+            <h1 class="text-2xl font-bold text-slate-800">Мои заметки</h1>
+            <button onclick="exportToPDF()" class="bg-slate-800 text-white px-4 py-2 rounded-xl text-sm hover:bg-slate-700 transition-all">
+                Экспорт в PDF
+            </button>
+        </header>
+
+        <div class="bg-white p-6 rounded-2xl shadow-sm mb-8 border border-slate-100">
+            <textarea id="noteInput" class="w-full h-32 p-4 bg-slate-50 rounded-xl border-none focus:ring-2 focus:ring-slate-200 outline-none resize-none" placeholder="Что на уме?"></textarea>
+            <button onclick="addNote()" class="mt-4 w-full bg-indigo-500 text-white py-3 rounded-xl font-medium hover:bg-indigo-600 active:scale-[0.98] transition-all">
+                Добавить заметку
+            </button>
+        </div>
+
+        <div id="notesContainer" class="space-y-4">
+            </div>
+    </div>
+
+    <script>
+        const { jsPDF } = window.jspdf;
+        let notes = JSON.parse(localStorage.getItem('my_notes')) || [];
+
+        function renderNotes() {
+            const container = document.getElementById('notesContainer');
+            container.innerHTML = '';
+            
+            notes.forEach((note, index) => {
+                const div = document.createElement('div');
+                div.className = "bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex justify-between items-start animate-in fade-in duration-300";
+                div.innerHTML = `
+                    <p class="text-slate-700 whitespace-pre-wrap">${note}</p>
+                    <button onclick="deleteNote(${index})" class="text-rose-400 hover:text-rose-600 ml-4">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
+                        </svg>
+                    </button>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function addNote() {
+            const input = document.getElementById('noteInput');
+            if (!input.value.trim()) return;
+            
+            notes.unshift(input.value);
+            save();
+            input.value = '';
+            renderNotes();
+        }
+
+        function deleteNote(index) {
+            notes.splice(index, 1);
+            save();
+            renderNotes();
+        }
+
+        function save() {
+            localStorage.setItem('my_notes', JSON.stringify(notes));
+        }
+
+        async function exportToPDF() {
+            if (notes.length === 0) return alert("Нет заметок для экспорта");
+            
+            const doc = new jsPDF();
+            doc.setFontSize(20);
+            doc.text("Мои заметки", 20, 20);
+            
+            doc.setFontSize(12);
+            let y = 30;
+            
+            notes.forEach((note, i) => {
+                const lines = doc.splitTextToSize(`${i + 1}. ${note}`, 170);
+                doc.text(lines, 20, y);
+                y += (lines.length * 7) + 5;
+                
+                if (y > 280) { // Перенос на новую страницу
+                    doc.addPage();
+                    y = 20;
+                }
+            });
+            
+            doc.save("notes.pdf");
+        }
+
+        // Инициализация
+        renderNotes();
+    </script>
+</body>
+</html>
